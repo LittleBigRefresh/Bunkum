@@ -215,7 +215,8 @@ internal class MainMiddleware : IMiddleware
                     return new Response([], ContentType.Plaintext, HttpStatusCode.BadRequest);
                 }
 
-                if (!this.TryGetBodyParameter(attribute, paramType, body, out arg))
+                // Don't try to deserialize/inject empty bodies if the endpoint explicitly allows them.
+                if (context.HasBody && !this.TryGetBodyParameter(attribute, paramType, body, out arg))
                 {
                     return new Response([], ContentType.Plaintext, HttpStatusCode.BadRequest);
                 }
