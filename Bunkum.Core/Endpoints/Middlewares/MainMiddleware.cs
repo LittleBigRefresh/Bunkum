@@ -76,7 +76,12 @@ internal class MainMiddleware : IMiddleware
         {
             foreach (MethodInfo method in group.GetType().GetMethods())
             {
-                IEnumerable<EndpointAttribute> attributes = method.GetCustomAttributes<EndpointAttribute>();
+                IEnumerable<EndpointAttribute> attributes = method.GetCustomAttributes<EndpointAttribute>()
+                    // Prefer matching routes with the least amount of route params.
+                    // This way, e.g. if we have a request for "/a/route", and we have both an "/a/route" and an "/a/{param}" endpoint,
+                    // we will always choose the first endpoint instead.
+                    .OrderBy(e => e.RouteParamCount);
+                
                 foreach (EndpointAttribute attribute in attributes)
                 {
                     if(attribute.Protocol.Name != context.Protocol.Name)
