@@ -33,10 +33,26 @@ public abstract class Config
     /// <param name="oldConfig">The configuration we are migrating, stored as dynamic.</param>
     protected internal abstract void Migrate(int oldVer, dynamic oldConfig);
 
+    /// <summary>
+    /// Will be called immediately after <see cref="Migrate"/> if you have passed an IEnumerable of Configs to <see cref="LoadFromJsonFile"/>
+    /// via its otherConfigs parameter. Override this method and pass your desired configs into <see cref="LoadFromJsonFile"/> if you want to apply
+    /// additional migrations to this config that involve other configs, e.g. if you want to move a config option into another config,
+    /// or you need to read another config's option to migrate one of this config's own options.
+    /// Be aware that the base method does nothing, and nothing in the base Config class will take care of saving the configs in the parameter,
+    /// so if you do edit any of them, you will have to save them yourself using their now public <see cref="SaveToJsonFile"/> method.
+    /// </summary>
+    /// <param name="oldVer">The version of the configuration we are migrating.</param>
+    /// <param name="oldConfig">The configuration we are migrating, stored as dynamic.</param>
+    /// <param name="otherConfigs">The list of other configs you have passed, which you want to use during migration.</param>
+    protected internal virtual void MigrateUsingOtherConfigs(int oldVer, dynamic oldConfig, IEnumerable<Config> otherConfigs)
+    {
+        // Do nothing if not overridden
+    }
+
     [JsonIgnore]
     private bool NeedsMigration => this.CurrentConfigVersion > this.Version;
 
-    private void MigrateIfNecessary(string? jsonText = null)
+    private void MigrateIfNecessary(string? jsonText = null, IEnumerable<Config>? otherConfigs = null)
     {
         if (!this.NeedsMigration) return;
         
@@ -52,6 +68,10 @@ public abstract class Config
         }
             
         this.Migrate(this.Version, configDynamic);
+        if (otherConfigs != null)
+        {
+            this.MigrateUsingOtherConfigs(this.Version, configDynamic, otherConfigs);
+        }
         this.Version = this.CurrentConfigVersion;
         
         // Save config to disk if possible
@@ -75,7 +95,7 @@ public abstract class Config
     /// <typeparam name="TConfig">An object extending <see cref="Config"/> that represents your server's configuration.</typeparam>
     /// <returns>The configuration, either freshly created or previously existing.</returns>
     /// <exception cref="ArgumentNullException">The file could not be found or created.</exception>
-    public static TConfig LoadFromJsonFile<TConfig>(string filename, Logger logger) where TConfig : Config, new()
+    public static TConfig LoadFromJsonFile<TConfig>(string filename, Logger logger, IEnumerable<Config>? otherConfigs = null) where TConfig : Config, new()
     {
         TConfig? config;
         string? file = null;
@@ -96,7 +116,7 @@ public abstract class Config
         if (config == null) throw new ArgumentNullException(nameof(filename));
 
         config.Filename = filename;
-        config.MigrateIfNecessary(file);
+        config.MigrateIfNecessary(file, otherConfigs);
 
         return config;
     }
