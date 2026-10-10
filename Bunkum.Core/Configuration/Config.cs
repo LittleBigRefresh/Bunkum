@@ -13,7 +13,7 @@ namespace Bunkum.Core.Configuration;
 public abstract class Config
 {
     [JsonIgnore]
-    private string? _filename;
+    public string? Filename { get; private set; }
 
     /// <summary>
     /// A number representing the schema version of your configuration. Start at 1, then change it when you make a change to your config class.
@@ -58,12 +58,12 @@ public abstract class Config
         this.SaveToFile();
     }
 
-    private void SaveToFile()
+    public void SaveToFile()
     {
-        if (this._filename == null) return;
+        if (this.Filename == null) return;
         
         string json = JsonConvert.SerializeObject(this, Formatting.Indented);
-        File.WriteAllText(this._filename, json);
+        File.WriteAllText(this.Filename, json);
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public abstract class Config
         
         if (config == null) throw new ArgumentNullException(nameof(filename));
 
-        config._filename = filename;
+        config.Filename = filename;
         config.MigrateIfNecessary(file);
 
         return config;
