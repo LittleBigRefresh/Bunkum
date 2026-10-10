@@ -55,10 +55,10 @@ public abstract class Config
         this.Version = this.CurrentConfigVersion;
         
         // Save config to disk if possible
-        this.SaveToFile();
+        this.SaveToJsonFile();
     }
 
-    public void SaveToFile()
+    public void SaveToJsonFile()
     {
         if (this.Filename == null) return;
         
