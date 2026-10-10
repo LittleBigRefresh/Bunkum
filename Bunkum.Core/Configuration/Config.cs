@@ -78,10 +78,17 @@ public abstract class Config
         this.SaveToJsonFile();
     }
 
+    /// <summary>
+    /// Saves this configuration to a JSON file on disk. The config must have been loaded via <see cref="LoadFromJsonFile"/> before saving,
+    /// otherwise it will throw an <see cref="InvalidOperationException"/>.
+    /// </summary>
     public void SaveToJsonFile()
     {
-        if (this.Filename == null) throw new InvalidOperationException($"Cannot save config '{this.GetType().Name}' to JSON file because it's not loaded (filename is not set)."
-            + $" Please use {nameof(LoadFromJsonFile)}() first, then try to save the config.");
+        if (this.Filename == null) 
+        {
+            throw new InvalidOperationException($"Cannot save config '{this.GetType().Name}' to JSON file because it's not loaded (filename is not set). "
+                                              + $"Please use {nameof(LoadFromJsonFile)}() first, then try to save the config.");
+        }
         
         string json = JsonConvert.SerializeObject(this, Formatting.Indented);
         File.WriteAllText(this.Filename, json);
