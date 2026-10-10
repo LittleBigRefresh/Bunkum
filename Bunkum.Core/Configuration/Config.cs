@@ -60,7 +60,8 @@ public abstract class Config
 
     public void SaveToJsonFile()
     {
-        if (this.Filename == null) throw new InvalidOperationException($"Cannot save config '{this.GetType().Name}' to JSON file if it's not loaded. Please use {nameof(LoadFromJsonFile)}() first, then try to save it.");
+        if (this.Filename == null) throw new InvalidOperationException($"Cannot save config '{this.GetType().Name}' to JSON file because it's not loaded (filename is not set)."
+            + $" Please use {nameof(LoadFromJsonFile)}() first, then try to save the config.");
         
         string json = JsonConvert.SerializeObject(this, Formatting.Indented);
         File.WriteAllText(this.Filename, json);
