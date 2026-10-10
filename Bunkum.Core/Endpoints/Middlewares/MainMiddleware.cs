@@ -74,81 +74,99 @@ internal class MainMiddleware : IMiddleware
         MemoryStream body = context.InputStream;
         foreach (EndpointGroup group in this._endpoints)
         {
+            // Have to get the attributes from our methods already so we could sort them by route param count below.
+            IEnumerable<LoadedEndpointData> endpoints = [];
             foreach (MethodInfo method in group.GetType().GetMethods())
             {
-                IEnumerable<EndpointAttribute> attributes = method.GetCustomAttributes<EndpointAttribute>()
-                    // Prefer matching routes with the least amount of route params.
-                    // This way, e.g. if we have a request for "/a/route", and we have both an "/a/route" and an "/a/{param}" endpoint,
-                    // we will always choose the first endpoint instead.
-                    .OrderBy(e => e.RouteParamCount);
-                
-                foreach (EndpointAttribute attribute in attributes)
+                foreach (EndpointAttribute methodAttribute in method.GetCustomAttributes<EndpointAttribute>())
                 {
-                    if(attribute.Protocol.Name != context.Protocol.Name)
-                        continue;
-                        
-                    if (!attribute.UriMatchesRoute(context.Uri, context.Method, out Dictionary<string, string> parameters))
-                        continue;
+                    endpoints = endpoints.Append(new(methodAttribute, method));
+                }
+            }
 
-                    this._logger.LogTrace(BunkumCategory.Request, $"Handling request with {group.GetType().Name}.{method.Name}");
+            // Now order our attribute/method pairs by route param count. 
+            // This is for cases where we, for example, have both a /param/{input} endpoint,
+            // but also a /param/special endpoint pointing to another method, and we receive a request for /param/special.
+            // Previously, in such a case, we would have routed the request to either /param/{input} or /param/special,
+            // probably depending on which one appears first in the Assembly, because technically both match.
+            // But since the downstream project has declared a /param/special endpoint,
+            // they very likely don't want requests intended for it to be routed to /param/{input} instead.
+            // We easily fix this issue by preferring matching endpoints with the least number of route params.
+            /*
+             * TODO maybe cache the ordered list so we don't have to order it for every request?
+             * The BunkumServer.AddEndpointGroup() method doesn't directly add or remove endpoints to a group at runtime,
+             * so we could just store our cache on the EndpointGroup we're already reading from.
+             * Should find out whether such caching would even be necessary though (whether it would save any time),
+             * might want to test with EndpointGroups that have many methods with EndpointAttributes.
+             */
+            endpoints = endpoints.OrderBy(e => e.Attribute.RouteParamCount);
 
+            foreach (LoadedEndpointData endpoint in endpoints)
+            {
+                if(endpoint.Attribute.Protocol.Name != context.Protocol.Name)
+                    continue;
+                    
+                if (!endpoint.Attribute.UriMatchesRoute(context.Uri, context.Method, out Dictionary<string, string> parameters))
+                    continue;
+
+                this._logger.LogTrace(BunkumCategory.Request, $"Handling request with {group.GetType().Name}.{endpoint.Method.Name}");
+
+                foreach (Service service in this._services)
+                {
+                    Response? response = service.OnRequestHandled(context, endpoint.Method, database);
+                    if (response != null) return response;
+                }
+
+                // Build list to invoke endpoint method with
+                List<object?> invokeList = new() { 
+                    new RequestContext // 1st argument is always the request context. This is fact, and is backed by an analyzer.
+                    {
+                        RequestStream = body,
+                        QueryString = context.Query,
+                        Url = context.Uri,
+                        Logger = this._logger,
+                        Cookies = context.Cookies,
+                        RemoteEndpoint = context.RemoteEndpoint,
+                        Protocol = context.Protocol,
+                        Method = context.Method,
+                        RequestHeaders = context.RequestHeaders,
+                        ResponseHeaders = context.ResponseHeaders,
+                        RemoteCertificate = context.RemoteCertificate,
+                    },
+                };
+
+                // Next, lets iterate through the method's arguments and add some based on what we find.
+                {
+                    Response? response = this.InjectParametersIntoEndpointInvocation(context, endpoint.Method, endpoint.Attribute, body, parameters, database, invokeList);
+                    if (response != null) return response;
+                }
+                
+                ClientCacheResponseAttribute? cacheAttribute = endpoint.Method.GetCustomAttribute<ClientCacheResponseAttribute>();
+                if (cacheAttribute?.Seconds != null)
+                {
+                    context.ResponseHeaders.Add("Cache-Control", "max-age=" + cacheAttribute.Seconds);
+                }
+                
+                Response? returnedResponse = null;
+                try
+                {
+                    object? val = endpoint.Method.Invoke(group, invokeList.ToArray());
+                    returnedResponse = this.GenerateResponseFromEndpoint(val, endpoint.Attribute, endpoint.Method);
+                    
+                    // ReSharper disable once ConstantConditionalAccessQualifier
+                    int statusCode = (int)returnedResponse?.StatusCode!;
+                    if (cacheAttribute is { OnlyCacheSuccess: true } && statusCode is < 200 or >= 299)
+                    {
+                        context.ResponseHeaders.Remove("Cache-Control");
+                    }
+                    
+                    return returnedResponse;
+                }
+                finally
+                {
                     foreach (Service service in this._services)
                     {
-                        Response? response = service.OnRequestHandled(context, method, database);
-                        if (response != null) return response;
-                    }
-
-                    // Build list to invoke endpoint method with
-                    List<object?> invokeList = new() { 
-                        new RequestContext // 1st argument is always the request context. This is fact, and is backed by an analyzer.
-                        {
-                            RequestStream = body,
-                            QueryString = context.Query,
-                            Url = context.Uri,
-                            Logger = this._logger,
-                            Cookies = context.Cookies,
-                            RemoteEndpoint = context.RemoteEndpoint,
-                            Protocol = context.Protocol,
-                            Method = context.Method,
-                            RequestHeaders = context.RequestHeaders,
-                            ResponseHeaders = context.ResponseHeaders,
-                            RemoteCertificate = context.RemoteCertificate,
-                        },
-                    };
-
-                    // Next, lets iterate through the method's arguments and add some based on what we find.
-                    {
-                        Response? response = this.InjectParametersIntoEndpointInvocation(context, method, attribute, body, parameters, database, invokeList);
-                        if (response != null) return response;
-                    }
-                    
-                    ClientCacheResponseAttribute? cacheAttribute = method.GetCustomAttribute<ClientCacheResponseAttribute>();
-                    if (cacheAttribute?.Seconds != null)
-                    {
-                        context.ResponseHeaders.Add("Cache-Control", "max-age=" + cacheAttribute.Seconds);
-                    }
-                    
-                    Response? returnedResponse = null;
-                    try
-                    {
-                        object? val = method.Invoke(group, invokeList.ToArray());
-                        returnedResponse = this.GenerateResponseFromEndpoint(val, attribute, method);
-                        
-                        // ReSharper disable once ConstantConditionalAccessQualifier
-                        int statusCode = (int)returnedResponse?.StatusCode!;
-                        if (cacheAttribute is { OnlyCacheSuccess: true } && statusCode is < 200 or >= 299)
-                        {
-                            context.ResponseHeaders.Remove("Cache-Control");
-                        }
-                        
-                        return returnedResponse;
-                    }
-                    finally
-                    {
-                        foreach (Service service in this._services)
-                        {
-                            service.AfterRequestHandled(context, returnedResponse, method, database);
-                        }
+                        service.AfterRequestHandled(context, returnedResponse, endpoint.Method, database);
                     }
                 }
             }
