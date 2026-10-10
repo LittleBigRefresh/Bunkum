@@ -38,8 +38,9 @@ public abstract class Config
     /// via its otherConfigs parameter. Override this method and pass your desired configs into <see cref="LoadFromJsonFile"/> if you want to apply
     /// additional migrations to this config that involve other configs, e.g. if you want to move a config option into another config,
     /// or you need to read another config's option to migrate one of this config's own options.
-    /// Be aware that the base method does nothing, and nothing in the base Config class will take care of saving the configs in the parameter,
+    /// Be aware that the base method does nothing, and nothing in the base Config class will take care of saving the configs passed via the parameter,
     /// so if you do edit any of them, you will have to save them yourself using their now public <see cref="SaveToJsonFile"/> method.
+    /// The Config this method is called on will be saved though.
     /// </summary>
     /// <param name="oldVer">The version of the configuration we are migrating.</param>
     /// <param name="oldConfig">The configuration we are migrating, stored as dynamic.</param>
@@ -99,6 +100,10 @@ public abstract class Config
     /// </summary>
     /// <param name="filename">What the config's filename should be stored as</param>
     /// <param name="logger">An instance of the logger, used for debugging</param>
+    /// <param name="otherConfigs">
+    ///     An optional list of other Configs you want to use for migration.
+    ///     See <see cref="MigrateUsingOtherConfigs"/>'s summary for more info.
+    ///  </param>
     /// <typeparam name="TConfig">An object extending <see cref="Config"/> that represents your server's configuration.</typeparam>
     /// <returns>The configuration, either freshly created or previously existing.</returns>
     /// <exception cref="ArgumentNullException">The file could not be found or created.</exception>
