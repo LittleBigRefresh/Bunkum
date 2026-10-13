@@ -9,7 +9,7 @@ namespace Bunkum.Core.Storage;
 /// <seealso cref="BunkumFileSystem"/>
 public class FileSystemDataStore : IDataStore
 {
-    private static readonly string DataStoreDirectory = Path.Combine(BunkumFileSystem.DataDirectory, "dataStore" + Path.DirectorySeparatorChar);
+    protected static readonly string DataStoreDirectory = Path.Combine(BunkumFileSystem.DataDirectory, "dataStore" + Path.DirectorySeparatorChar);
     /// <summary>
     /// Whether or not to protect against path traversal.
     /// These protections are enabled by default, but this can be disabled for (minuscule) performance improvements.
@@ -34,7 +34,7 @@ public class FileSystemDataStore : IDataStore
         this.EnableTraversalSafety = enableTraversalSafety;
     }
 
-    private string GetPath(string key)
+    protected string GetPath(string key)
     {
         if (!key.Contains('/')) return this.GetFullPathFromKey(key);
         
@@ -59,7 +59,7 @@ public class FileSystemDataStore : IDataStore
         return this.GetFullPathFromKey(key);
     }
 
-    private string GetFullPathFromKey(string key)
+    protected string GetFullPathFromKey(string key)
     {
         string path = DataStoreDirectory + key;
         
