@@ -11,6 +11,10 @@ jobs:
   build:
     name: Upload NuGet package to Github
     runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
