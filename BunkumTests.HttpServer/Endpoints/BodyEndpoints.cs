@@ -29,10 +29,30 @@ public class BodyEndpoints : EndpointGroup
         return body;
     }
     
+    [AllowEmptyBody]
+    [HttpEndpoint("/body/json/optional", HttpMethods.Post, ContentType.Json)]
+    public Serializable OptionalJson(RequestContext context, Serializable? body)
+    {
+        return body ?? new()
+        {
+            Field = "had no body",
+        };
+    }
+    
     [HttpEndpoint("/body/xml", HttpMethods.Post, ContentType.Xml)]
     public Serializable Xml(RequestContext context, Serializable body)
     {
         return body;
+    }
+    
+    [AllowEmptyBody]
+    [HttpEndpoint("/body/xml/optional", HttpMethods.Post, ContentType.Xml)]
+    public Serializable OptionalXml(RequestContext context, Serializable? body)
+    {
+        return body ?? new()
+        {
+            Field = "had no body",
+        };
     }
     
     [HttpEndpoint("/body/byteArray", HttpMethods.Post)]
