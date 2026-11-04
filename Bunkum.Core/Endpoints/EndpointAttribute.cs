@@ -10,17 +10,18 @@ namespace Bunkum.Core.Endpoints;
 public abstract class EndpointAttribute : Attribute
 {
     public string FullRoute { get; private set; }
-    private readonly Dictionary<int, RouteParam> _parameterIndexes = new();
+    protected readonly Dictionary<int, RouteParam> _parameterIndexes = new();
 
     public Method Method { get; protected set; }
     public string ContentType { get; protected set; }
+    public int RouteParamCount => this._parameterIndexes.Count;
     
     /// <summary>
     /// The protocol this endpoint type is meant for.
     /// </summary>
     public abstract ProtocolInformation Protocol { get; }
 
-    private struct RouteParam
+    protected struct RouteParam
     {
         internal readonly int Skip;
         internal readonly string Name;

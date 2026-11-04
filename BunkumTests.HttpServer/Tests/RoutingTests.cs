@@ -106,4 +106,38 @@ public class RoutingTests : ServerDependentTest
             Assert.That(await msg.Content.ReadAsStringAsync(), Is.EqualTo("asdf,fdsa"));
         });
     }
+
+    [Test]
+    public async Task GetsNonRouteParamEndpointIfSpecialValue()
+    {
+        (BunkumServer server, HttpClient client) = this.Setup();
+        server.AddEndpointGroup<RouteParameterEndpoints>();
+        
+        // Call the regular endpoint
+        HttpResponseMessage msg = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/param/someNormalValue"));
+        Assert.Multiple(async () =>
+        {
+            Assert.That(msg.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(await msg.Content.ReadAsStringAsync(), Is.EqualTo("someNormalValue"));
+        });
+        
+        // Call the regular endpoint but with a param which is very similar to the super epic special input one (one more s at the end).
+        msg = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/param/superEpicSpecialInputs"));
+        Assert.Multiple(async () =>
+        {
+            Assert.That(msg.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(await msg.Content.ReadAsStringAsync(), Is.EqualTo("superEpicSpecialInputs"));
+        });
+        
+        // Call the super special epic endpoint.
+        // Although both routes start with /params/, and both don't have any more slashes after that, this route param
+        // in particular will cause the request to be handled by its own endpoint, not the /params/{input} one,
+        // even if it appears first in the assembly.
+        msg = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/param/superEpicSpecialInput"));
+        Assert.Multiple(async () =>
+        {
+            Assert.That(msg.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(await msg.Content.ReadAsStringAsync(), Is.EqualTo("You have reached the super special epic input endpoint and you have avoided the /param/{input} one."));
+        });
+    }
 }
