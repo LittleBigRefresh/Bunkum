@@ -9,12 +9,13 @@ namespace Bunkum.Core.Storage;
 /// <seealso cref="BunkumFileSystem"/>
 public class FileSystemDataStore : IDataStore
 {
-    private static readonly string DataStoreDirectory = Path.Combine(BunkumFileSystem.DataDirectory, "dataStore" + Path.DirectorySeparatorChar);
+    protected static readonly string DataStoreDirectory = Path.Combine(BunkumFileSystem.DataDirectory, "dataStore" + Path.DirectorySeparatorChar);
     /// <summary>
     /// Whether or not to protect against path traversal.
     /// These protections are enabled by default, but this can be disabled for (minuscule) performance improvements.
     /// </summary>
     private bool EnableTraversalSafety { get; init; } = true;
+    private bool EnableThrowingOnExceptions { get; init; } = true;
 
     /// <summary>
     /// Instantiates the DataStore. This constructor creates a dataStore directory if it does not exist.
@@ -29,12 +30,16 @@ public class FileSystemDataStore : IDataStore
     /// Instantiates the DataStore. This constructor creates a dataStore directory if it does not exist.
     /// </summary>
     /// <param name="enableTraversalSafety">Whether or not to protect against path traversal.</param>
-    public FileSystemDataStore(bool enableTraversalSafety)
+    /// <param name="enableThrowingOnExceptions">
+    /// Whether or not to rethrow caught exceptions after they get handled in <see cref="WriteToStore"/> and <see cref="WriteToStoreFromStream"/>.
+    /// </param>
+    public FileSystemDataStore(bool enableTraversalSafety, bool enableThrowingOnExceptions = false)
     {
         this.EnableTraversalSafety = enableTraversalSafety;
+        this.EnableThrowingOnExceptions = enableThrowingOnExceptions;
     }
 
-    private string GetPath(string key)
+    protected string GetPath(string key)
     {
         if (!key.Contains('/')) return this.GetFullPathFromKey(key);
         
@@ -59,7 +64,7 @@ public class FileSystemDataStore : IDataStore
         return this.GetFullPathFromKey(key);
     }
 
-    private string GetFullPathFromKey(string key)
+    protected string GetFullPathFromKey(string key)
     {
         string path = DataStoreDirectory + key;
         
@@ -78,13 +83,19 @@ public class FileSystemDataStore : IDataStore
     /// <inheritdoc />
     public bool WriteToStore(string key, byte[] data)
     {
+        string path = this.GetPath(key);
         try
         {
-            File.WriteAllBytes(this.GetPath(key), data);
+            File.WriteAllBytes(path, data);
             return true;
         }
         catch
         {
+            // If we managed to create the file, but not write all bytes, we will have to remove the file ourselves,
+            // since it's definitely going to be corrupt at this point (empty or missing an unknown number of bytes)
+            File.Delete(path);
+            if (this.EnableThrowingOnExceptions) throw;
+
             return false;
         }
     }
@@ -110,14 +121,20 @@ public class FileSystemDataStore : IDataStore
     /// <inheritdoc />
     public bool WriteToStoreFromStream(string key, Stream data)
     {
+        string path = this.GetPath(key);
         try
         {
-            using FileStream fileStream = File.OpenWrite(this.GetPath(key));
+            using FileStream fileStream = File.OpenWrite(path);
             data.CopyTo(fileStream);
             return true;
         }
         catch
         {
+            // If we managed to create the file, but not write all bytes, we will have to remove the file ourselves,
+            // since it's definitely going to be corrupt at this point (empty or missing an unknown number of bytes)
+            File.Delete(path);
+            if (this.EnableThrowingOnExceptions) throw;
+
             return false;
         }
     }
