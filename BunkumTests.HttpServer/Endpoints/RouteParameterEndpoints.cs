@@ -12,6 +12,12 @@ public class RouteParameterEndpoints : EndpointGroup
     {
         return input;
     }
+
+    [HttpEndpoint("/param/superEpicSpecialInput")]
+    public string SpecialParameter(RequestContext context)
+    {
+        return "You have reached the super special epic input endpoint and you have avoided the /param/{input} one.";
+    }
     
     [HttpEndpoint("/params/{input}/{inputOther}")]
     public string Parameters(RequestContext context, string input, string inputOther)
