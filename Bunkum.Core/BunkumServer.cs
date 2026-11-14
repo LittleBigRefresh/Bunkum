@@ -195,8 +195,9 @@ public abstract partial class BunkumServer : IHotReloadable
         {
             try
             {
+                Debug.Assert(this._listener != null);
 
-                await this._listener.WaitForConnectionAsync(
+                await this._listener!.WaitForConnectionAsync(
                     async context => await Task.Factory.StartNew(async () =>
                     {
                         await this.CompleteRequestAsync(context);
@@ -502,7 +503,8 @@ public abstract partial class BunkumServer : IHotReloadable
     }
     
     /// <summary>
-    /// Registers a <see cref="TBunkumSerializer"/> that will be used for its set of Content Types when creating a Response's data.
+    /// Registers an <see cref="IBunkumSerializer"/>, specified by the generic TBunkumSerializer type,
+    /// that will be used for its set of Content Types when creating a Response's data.
     /// </summary>
     /// <typeparam name="TBunkumSerializer">The type of <see cref="IBunkumSerializer"/> to create.</typeparam>
     public void AddSerializer<TBunkumSerializer>() where TBunkumSerializer : IBunkumSerializer, new()
@@ -511,7 +513,7 @@ public abstract partial class BunkumServer : IHotReloadable
     }
     
     /// <summary>
-    /// Removes and unregisters all <see cref="TBunkumSerializer"/>s. 
+    /// Removes and unregisters all <see cref="IBunkumSerializer"/>s of generic type TBunkumSerializer. 
     /// </summary>
     /// <typeparam name="TBunkumSerializer">The type of <see cref="IBunkumSerializer"/> to remove.</typeparam>
     /// <returns>The number of serializers removed.</returns>

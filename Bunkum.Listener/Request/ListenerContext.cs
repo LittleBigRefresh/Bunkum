@@ -26,7 +26,7 @@ public abstract class ListenerContext
     /// <summary>
     /// The protocol method the request is using.
     /// </summary>
-    public Method Method { get; set; }
+    public Method Method { get; set; } = null!;
     
     /// <summary>
     /// The location/endpoint the client is going to.
@@ -140,6 +140,7 @@ public abstract class ListenerContext
         await this.SendResponse(this.ResponseCode, dataSlice);
     }
 
+#pragma warning disable CS1998 // async method lacks await operators
     /// <summary>
     /// Send our response headers, status code, and close the connection.  
     /// </summary>
@@ -152,6 +153,7 @@ public abstract class ListenerContext
         this.SendResponseInternal(code, data).Wait();
         this.CloseConnection();
     }
+#pragma warning restore CS1998
 
     protected abstract Task SendResponseInternal(HttpStatusCode code, ArraySegment<byte>? data = null);
 

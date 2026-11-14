@@ -9,11 +9,11 @@ namespace Bunkum.Core.Endpoints;
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 public abstract class EndpointAttribute : Attribute
 {
-    public string FullRoute { get; private set; }
+    public string FullRoute { get; private set; } = null!;
     protected readonly Dictionary<int, RouteParam> _parameterIndexes = new();
 
-    public Method Method { get; protected set; }
-    public string ContentType { get; protected set; }
+    public Method Method { get; protected set; } = null!;
+    public string ContentType { get; protected set; } = null!;
     public int RouteParamCount => this._parameterIndexes.Count;
     
     /// <summary>

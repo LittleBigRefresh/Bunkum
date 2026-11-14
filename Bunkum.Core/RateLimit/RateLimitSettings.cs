@@ -11,6 +11,7 @@ public struct RateLimitSettings
     /// <param name="requestTimeoutDuration">How long should it take a request to stop counting towards the rate limit?</param>
     /// <param name="maxRequestAmount">How many requests until the rate limit is triggered?</param>
     /// <param name="requestBlockDuration">How long should the user be blocked when the rate limit is triggered?</param>
+    /// <param name="bucket">The ID of the bucket which will be used by rate limiters to store and get bucket-specific rate-limit data.</param>
     public RateLimitSettings(int requestTimeoutDuration, int maxRequestAmount, int requestBlockDuration, string bucket)
     {
         this.RequestTimeoutDuration = requestTimeoutDuration;
