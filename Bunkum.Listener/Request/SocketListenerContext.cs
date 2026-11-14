@@ -23,6 +23,7 @@ public abstract class SocketListenerContext : ListenerContext
     /// Initializes the <see cref="ListenerContext"/> with socket support.
     /// </summary>
     /// <param name="socket">The socket to use for this context.</param>
+    /// <param name="stream">The stream associated with this SocketListenerContext.</param>
     protected SocketListenerContext(Socket socket, Stream stream)
     {
         this._socket = socket;

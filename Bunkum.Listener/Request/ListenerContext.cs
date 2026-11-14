@@ -26,7 +26,7 @@ public abstract class ListenerContext
     /// <summary>
     /// The protocol method the request is using.
     /// </summary>
-    public Method Method { get; set; }
+    public Method Method { get; set; } = null!;
     
     /// <summary>
     /// The location/endpoint the client is going to.
