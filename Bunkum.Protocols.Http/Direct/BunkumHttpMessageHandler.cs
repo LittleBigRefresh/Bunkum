@@ -18,6 +18,7 @@ public class BunkumHttpMessageHandler : HttpMessageHandler
         return this.SendAsync(request, ct).Result;
     }
 
+#pragma warning disable CS1998 // async method lacks await operators
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
         CancellationToken ct)
     {
@@ -31,6 +32,7 @@ public class BunkumHttpMessageHandler : HttpMessageHandler
 
         return ParseResponseMessage(stream);
     }
+#pragma warning restore CS1998
 
     private static HttpResponseMessage ParseResponseMessage(Stream stream)
     {
