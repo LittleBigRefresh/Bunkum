@@ -25,7 +25,7 @@ public class BunkumGeminiServer : BunkumServer
         //If the SSL configuration is not specified, load the config from JSON
         this._sslConfiguration = sslConfiguration ?? Config.LoadFromJsonFile<SslConfiguration>("geminissl.json", this.Logger);
 
-        this._cert = new X509Certificate2(File.ReadAllBytes(this._sslConfiguration.SslCertificate), this._sslConfiguration.CertificatePassword);
+        this._cert = X509CertificateLoader.LoadPkcs12FromFile(this._sslConfiguration.SslCertificate, this._sslConfiguration.CertificatePassword);
     }
 
     protected override BunkumConfig CreateConfig(string filename) 
